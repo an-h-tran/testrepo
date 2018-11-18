@@ -1,0 +1,83 @@
+---
+title: "HW3 - Notebook V0.1"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+Basic set-up for HW: first step is loading existing packages and reading data
+```{r}
+library(tidyverse)
+library(devtools)
+
+# all inputs (assuming that your WD contains the input and output subfolders):
+#datraw <- read_csv('input/dataCPmodel.csv') #you don't need this for this exercise
+datreg <- read_csv("input/Country-and-area-classification.csv")
+datpop <- read_csv(file= "input/Number-of-women-married-in union_15-49.csv")
+samples_cp <- readRDS("output/samples_cp.rds")
+```
+
+Load the FPEM package (that you will extend) and check that you can access help files
+```{r}
+# based on the source package:
+load_all() # go straight from source package to loaded package (or click install and restart, ctrl+shift+b)
+
+# you don't need to install from your bundled package here
+# but if you want to check it (before handing it in)
+# this is how you can install a bundled package and load it
+# my bundled package is called fpempackage_0.1.0 and saved one directory up from WD
+#install.packages("fpem/fpemp01_0.1.0.tar.gz", repos = NULL, type = "source")
+# (alternatively, you can do this by clicking Install in package pane and choosing to install a local package)
+#library(fpem01)
+
+# once loaded, check that you can access help files: 
+?summarize_fp
+# for you to add
+?create_regional_results
+```
+
+Get country results
+```{r} 
+country_res <- summarize_fp(samples_cp)
+```
+
+For you to add: code block to calculate regional results
+```{r}
+# reshape samples_cp to create country samples with region names and pop counts
+region_name <-
+  left_join (samples_cp, select(datreg, region, ISO_code), by = c("iso"="ISO_code"))
+
+datpop_res <-
+  datpop %>%
+  gather(key = "year", value ="population_ct", -Country_letter_code, -iso, -Country, convert = TRUE)
+
+country_samples <-
+  left_join(region_name, select(datpop_res, iso, year, population_ct), by =c("iso", "year"))
+
+# getting regional results
+regional_res <- create_regional_results(country_samples)
+regional_res
+```
+
+Access results
+```{r, error = TRUE} 
+# error = TRUE added to display the error in the knitted html
+
+# illustrated here just for countries
+# unique(country_res$iso)
+access_results(country_res, regions = c(4, 8)) # accessing results
+access_results(country_res, regions = c(1,4)) # getting an error when including a non-existing region
+
+#to do:
+# extend to show examples for countries as well as regions
+# first merge the country and regional results
+
+colnames(regional_res)[1] <- "iso"
+country_res[,1] <- map(country_res[,1], as.character)
+combined_res <- bind_rows(country_res, regional_res)
+
+# then use the access_results function again
+access_results(combined_res, regions = c(4, "Southern Asia"))
+```
+
